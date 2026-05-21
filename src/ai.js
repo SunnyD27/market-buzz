@@ -17,7 +17,13 @@ export async function generateContent(marketData, news, movers) {
 
   const prompt = `You are the writer for "Market Buzz Daily," a fun and engaging daily stock market digest for a 12-year-old who is learning about investing. He owns VOO (Vanguard S&P 500 ETF) in his portfolio.
 
-Your job: Take the raw market data and news below and turn it into a JSON object I can use to build the daily digest page.
+STEP 1: Before writing anything, use web_search to search for today's top stock market and business news headlines. Search for:
+- 'stock market news today'
+- 'biggest business news today'
+- any major earnings, IPOs, or economic events happening today
+Use what you find PLUS the raw data below to write the digest. The web search results should be your PRIMARY source for story selection — the raw FMP data below is mainly for the market scoreboard numbers.
+
+Your job: Take the web search findings and raw market data below and turn it into a JSON object I can use to build the daily digest page.
 
 VOICE & TONE RULES:
 - Write like a cool older brother explaining the markets — casual, fun, never boring
@@ -102,21 +108,59 @@ Generate exactly 3 stories (pick the most interesting/relevant from the news), 3
 
   const response = await client.messages.create({
     model: 'claude-sonnet-4-20250514',
-    max_tokens: 4000,
+    max_tokens: 8000,
+    tools: [
+      {
+        type: 'web_search_20250305',
+        name: 'web_search',
+      },
+    ],
     messages: [{ role: 'user', content: prompt }],
   });
+
+  // Web search is a server-side tool — Anthropic executes the search and
+  // returns search results inline alongside text blocks in the same response,
+  // so no client-side tool_use loop is needed. We log the search activity for
+  // visibility, then pull just the final text content.
+  const searchUses = response.content.filter(b => b.type === 'server_tool_use');
+  const searchResults = response.content.filter(b => b.type === 'web_search_tool_result');
+  if (searchUses.length || searchResults.length) {
+    const queries = searchUses
+      .map(b => b.input?.query)
+      .filter(Boolean);
+    console.log(`[AI] web_search ran — ${searchUses.length} queries, ${searchResults.length} result blocks. Queries: ${JSON.stringify(queries)}`);
+  } else {
+    console.log('[AI] web_search did NOT run (no server_tool_use blocks in response)');
+  }
+  console.log(`[AI] stop_reason: ${response.stop_reason}, content blocks: ${response.content.map(b => b.type).join(', ')}`);
 
   const text = response.content
     .filter(block => block.type === 'text')
     .map(block => block.text)
     .join('');
 
-  const cleaned = text.replace(/```json\s*/g, '').replace(/```\s*/g, '').trim();
+  return parseDigestJSON(text);
+}
 
+function parseDigestJSON(text) {
+  const cleaned = text.replace(/```json\s*/g, '').replace(/```\s*/g, '').trim();
   try {
     return JSON.parse(cleaned);
-  } catch (err) {
-    console.error('[AI] Failed to parse response:', cleaned.substring(0, 200));
+  } catch {
+    // Fallback: with web search enabled, Claude may prepend a short
+    // citation/synthesis paragraph before the JSON. Extract the largest
+    // {...} span and try that.
+    const first = cleaned.indexOf('{');
+    const last = cleaned.lastIndexOf('}');
+    if (first !== -1 && last > first) {
+      try {
+        return JSON.parse(cleaned.slice(first, last + 1));
+      } catch (innerErr) {
+        console.error('[AI] Failed to parse extracted JSON:', cleaned.slice(first, first + 300));
+        throw new Error(`Failed to parse AI response as JSON: ${innerErr.message}`);
+      }
+    }
+    console.error('[AI] No JSON object found in response. First 400 chars:', cleaned.substring(0, 400));
     throw new Error('Failed to parse AI response as JSON');
   }
 }
