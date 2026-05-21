@@ -1,6 +1,7 @@
 import express from 'express';
 import cron from 'node-cron';
 import path from 'path';
+import { existsSync } from 'fs';
 import { fileURLToPath } from 'url';
 import { generateDigest } from './generate.js';
 
@@ -82,4 +83,23 @@ app.listen(PORT, () => {
   console.log(`📈 Market Buzz running on port ${PORT}`);
   console.log(`   Digest scheduled for 7:00 AM EST daily`);
   console.log(`   Manual trigger: /generate?key=YOUR_ADMIN_KEY`);
+
+  // Self-heal on boot: if there's no digest on disk (fresh container,
+  // post-redeploy, empty volume on first start), kick off a generation
+  // in the background so the root URL doesn't sit on the "brewing"
+  // placeholder until the next 7 AM cron tick.
+  const digestPath = path.join(__dirname, '..', 'public', 'index.html');
+  if (existsSync(digestPath)) {
+    console.log('[Boot] Existing digest found on disk — serving as-is until 7 AM cron.');
+  } else {
+    console.log('[Boot] No digest on disk — generating one now in the background...');
+    generateDigest()
+      .then(() => {
+        process.env.LAST_GENERATED = new Date().toISOString();
+        console.log('[Boot] Initial digest generated successfully.');
+      })
+      .catch((err) => {
+        console.error('[Boot] Initial digest generation failed:', err.message);
+      });
+  }
 });
