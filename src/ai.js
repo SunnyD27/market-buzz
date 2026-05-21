@@ -30,6 +30,15 @@ VOICE & TONE RULES:
 - Skip any news about violence, war casualties, or disturbing events. Focus on business/tech/market stories.
 - If there's geopolitical news that affects markets, keep it very high-level (e.g. "tensions eased" not graphic details)
 
+STORY SELECTION RULES (CRITICAL):
+- Pick the 3 BIGGEST stories that would be on the front page of a business newspaper
+- Prioritize in this order: (1) major earnings from huge companies like Nvidia, Apple, Google, Amazon, Tesla (2) huge business events like IPOs, mergers, major product launches (3) macro events that move the whole market like oil prices, Fed decisions, inflation data, jobs reports (4) interesting tech/science/business stories a kid would find cool
+- NEVER write a story that just says "stocks went up" or "stocks went down" — that's what the scoreboard is for
+- NEVER write a story about random small-cap stocks, penny stocks, or unknown companies
+- NEVER make a story about VOO tracking the S&P — that's covered in the VOO Watch section
+- Each story should be about a SPECIFIC event, company, or development — not a general market recap
+- If the news feed is weak on a given day, it's better to explain an interesting concept tied to what happened than to write a boring "the market went up because investors were optimistic" story
+
 TODAY'S DATE: ${dateStr}
 TRADING DAY: Data is from ${tradingDayLabel}'s market close.
 

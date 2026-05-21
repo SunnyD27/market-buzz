@@ -50,23 +50,52 @@ export async function fetchMarketData(apiKey) {
 
 export async function fetchNews(apiKey) {
   try {
-    const articles = await fmpFetch(`/stock-news?limit=15&apikey=${apiKey}`, 'stock-news');
-    if (!Array.isArray(articles)) {
-      console.error('[Data] Unexpected news response:', JSON.stringify(articles).slice(0, 200));
-      return [];
-    }
-    const filtered = articles.filter(a => {
+    // Pull from multiple FMP /stable endpoints for broader, better coverage
+    const [generalRes, spyRes, bigTechRes, etfsRes, fmpArticlesRes] = await Promise.all([
+      fmpFetch(`/general-news?page=0&apikey=${apiKey}`, 'general-news'),
+      fmpFetch(`/stock-news?tickers=SPY&limit=5&apikey=${apiKey}`, 'stock-news(SPY)'),
+      fmpFetch(`/stock-news?tickers=NVDA,AAPL,MSFT,GOOGL,AMZN,TSLA,META&limit=8&apikey=${apiKey}`, 'stock-news(big-tech)'),
+      fmpFetch(`/stock-news?tickers=VOO,QQQ&limit=3&apikey=${apiKey}`, 'stock-news(VOO,QQQ)'),
+      fmpFetch(`/fmp-articles?page=0&size=5&apikey=${apiKey}`, 'fmp-articles'),
+    ]);
+
+    const general = Array.isArray(generalRes) ? generalRes : [];
+    const spy = Array.isArray(spyRes) ? spyRes : [];
+    const bigTech = Array.isArray(bigTechRes) ? bigTechRes : [];
+    const etfs = Array.isArray(etfsRes) ? etfsRes : [];
+    const fmpArticlesList = Array.isArray(fmpArticlesRes?.content)
+      ? fmpArticlesRes.content
+      : Array.isArray(fmpArticlesRes) ? fmpArticlesRes : [];
+
+    const allArticles = [...general, ...spy, ...bigTech, ...etfs, ...fmpArticlesList];
+
+    const filtered = allArticles.filter(a => {
       const title = (a.title || '').toLowerCase();
-      const skipTerms = ['penny stock', 'cannabis', 'meme coin', 'shiba', 'dogecoin', 'pump and dump'];
+      const skipTerms = [
+        'penny stock', 'cannabis', 'meme coin', 'shiba', 'dogecoin',
+        'pump and dump', 'microcap', 'otc', 'short squeeze alert',
+        'price target', 'analyst rating', 'buy rating', 'hold rating',
+        'dividend declared', 'ex-dividend',
+      ];
+      if (title.length < 20) return false;
       return !skipTerms.some(term => title.includes(term));
     });
-    return filtered.slice(0, 8).map(a => ({
+
+    const seen = new Set();
+    const unique = filtered.filter(a => {
+      const key = (a.title || '').toLowerCase().substring(0, 50);
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    });
+
+    return unique.slice(0, 15).map(a => ({
       title: a.title,
-      text: (a.text || '').substring(0, 500),
-      symbol: a.symbol || '',
-      url: a.url || '',
-      publishedDate: a.publishedDate,
-      site: a.site || '',
+      text: (a.text || a.content || '').substring(0, 600),
+      symbol: a.symbol || a.tickers || '',
+      url: a.url || a.link || '',
+      publishedDate: a.publishedDate || a.date || '',
+      site: a.site || a.source || '',
     }));
   } catch (err) {
     console.error('[Data] Failed to fetch news:', err.message);
