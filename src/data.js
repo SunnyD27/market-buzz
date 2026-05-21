@@ -1,15 +1,34 @@
-const FMP_BASE = 'https://financialmodelingprep.com/api';
+const FMP_BASE = 'https://financialmodelingprep.com/stable';
+
+async function fmpFetch(path, label) {
+  const url = `${FMP_BASE}${path}`;
+  const res = await fetch(url);
+  const body = await res.text();
+  let data;
+  try {
+    data = JSON.parse(body);
+  } catch {
+    console.error(`[Data] ${label} returned non-JSON (HTTP ${res.status}): ${body.slice(0, 200)}`);
+    return null;
+  }
+  if (data && typeof data === 'object' && !Array.isArray(data) && data['Error Message']) {
+    console.error(`[Data] ${label} FMP error: ${data['Error Message']}`);
+    return null;
+  }
+  return data;
+}
 
 export async function fetchMarketData(apiKey) {
   const symbols = ['^GSPC', '^IXIC', '^DJI', 'VOO'];
   const results = {};
   for (const symbol of symbols) {
     try {
-      const url = `${FMP_BASE}/v3/quote/${encodeURIComponent(symbol)}?apikey=${apiKey}`;
-      const res = await fetch(url);
-      const data = await res.json();
-      if (data && data[0]) {
-        const q = data[0];
+      const data = await fmpFetch(
+        `/quote?symbol=${encodeURIComponent(symbol)}&apikey=${apiKey}`,
+        `quote(${symbol})`,
+      );
+      const q = Array.isArray(data) ? data[0] : data;
+      if (q && typeof q.price === 'number') {
         results[symbol] = {
           name: q.name || symbol,
           price: q.price,
@@ -19,6 +38,8 @@ export async function fetchMarketData(apiKey) {
           dayHigh: q.dayHigh,
           dayLow: q.dayLow,
         };
+      } else {
+        console.error(`[Data] quote(${symbol}) returned no usable data:`, JSON.stringify(data).slice(0, 200));
       }
     } catch (err) {
       console.error(`[Data] Failed to fetch ${symbol}:`, err.message);
@@ -29,11 +50,9 @@ export async function fetchMarketData(apiKey) {
 
 export async function fetchNews(apiKey) {
   try {
-    const url = `${FMP_BASE}/v3/stock_news?limit=15&apikey=${apiKey}`;
-    const res = await fetch(url);
-    const articles = await res.json();
+    const articles = await fmpFetch(`/stock-news?limit=15&apikey=${apiKey}`, 'stock-news');
     if (!Array.isArray(articles)) {
-      console.error('[Data] Unexpected news response:', articles);
+      console.error('[Data] Unexpected news response:', JSON.stringify(articles).slice(0, 200));
       return [];
     }
     const filtered = articles.filter(a => {
@@ -43,7 +62,7 @@ export async function fetchNews(apiKey) {
     });
     return filtered.slice(0, 8).map(a => ({
       title: a.title,
-      text: a.text?.substring(0, 500) || '',
+      text: (a.text || '').substring(0, 500),
       symbol: a.symbol || '',
       url: a.url || '',
       publishedDate: a.publishedDate,
@@ -57,12 +76,10 @@ export async function fetchNews(apiKey) {
 
 export async function fetchMovers(apiKey) {
   try {
-    const [gainersRes, losersRes] = await Promise.all([
-      fetch(`${FMP_BASE}/v3/stock_market/gainers?apikey=${apiKey}`),
-      fetch(`${FMP_BASE}/v3/stock_market/losers?apikey=${apiKey}`),
+    const [gainers, losers] = await Promise.all([
+      fmpFetch(`/biggest-gainers?apikey=${apiKey}`, 'biggest-gainers'),
+      fmpFetch(`/biggest-losers?apikey=${apiKey}`, 'biggest-losers'),
     ]);
-    const gainers = await gainersRes.json();
-    const losers = await losersRes.json();
     const topGainers = (Array.isArray(gainers) ? gainers : [])
       .filter(s => s.price > 5).slice(0, 3)
       .map(s => ({ symbol: s.symbol, name: s.name, change: s.changesPercentage, price: s.price }));
