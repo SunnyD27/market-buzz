@@ -2,7 +2,7 @@
 
 export function buildHTML(content) {
   const {
-    date, tradingDay, marketVibe, vibeEmoji, vibeSummary, vooNote,
+    date, tradingDay, marketVibe, vibeEmoji, vibeSummary, vooNote, bigPicture,
     scoreboard, stories, comingUp, quiz, wordOfDay,
   } = content;
 
@@ -147,6 +147,11 @@ export function buildHTML(content) {
   .word-card .word-type { font-size: 12px; color: var(--text-dim); font-style: italic; margin-bottom: 10px; }
   .word-card .word-def { font-size: 15px; color: var(--text); line-height: 1.55; max-width: 500px; margin: 0 auto; }
   .vibe-bar { margin-top: 16px; text-align: center; background: linear-gradient(135deg, rgba(63,185,80,0.06), rgba(88,166,255,0.06)); border: 1px solid var(--card-border); border-radius: 16px; padding: 18px 20px; animation: fadeIn 0.5s ease-out both; }
+  .big-picture { margin-top: 16px; background: linear-gradient(135deg, rgba(88,166,255,0.12), rgba(88,166,255,0.03)); border: 1px solid rgba(88,166,255,0.25); border-radius: 16px; padding: 20px 22px; animation: fadeIn 0.5s ease-out both; }
+  .big-picture .bp-header { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
+  .big-picture .bp-header .emoji { font-size: 24px; line-height: 1; }
+  .big-picture .bp-header h3 { font-size: 18px; font-weight: 700; color: var(--text-bright); }
+  .big-picture p { font-size: 15px; line-height: 1.65; color: var(--text); }
   .footer { text-align: center; margin-top: 40px; padding-top: 20px; border-top: 1px solid var(--card-border); font-size: 13px; color: var(--text-dim); animation: fadeIn 0.5s ease-out both; }
   .footer .rocket { font-size: 20px; }
   @media (max-width: 600px) {
@@ -190,6 +195,14 @@ export function buildHTML(content) {
     <p style="font-size: 13px; color: var(--text-dim); margin-top: 10px;">
       ⭐ <strong style="color: var(--yellow);">VOO Watch:</strong> ${escapeHTML(vooNote)}
     </p>
+  </div>
+
+  <div class="big-picture">
+    <div class="bp-header">
+      <span class="emoji">🌎</span>
+      <h3>The Big Picture</h3>
+    </div>
+    <p>${escapeHTML(bigPicture)}</p>
   </div>
 
   <div class="section-header">

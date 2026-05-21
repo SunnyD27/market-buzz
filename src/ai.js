@@ -60,6 +60,7 @@ Return ONLY a JSON object with this exact structure (no markdown, no backticks, 
   "vibeEmoji": "appropriate emoji",
   "vibeSummary": "One fun sentence summarizing the overall market day",
   "vooNote": "A sentence explaining what today's VOO move means in dollars per share and connecting it to the S&P 500. Make it personal — this is HIS fund.",
+  "bigPicture": "3-4 sentences giving a fun, casual overview of what's going on in the world right now that's affecting the stock market. Cover the major themes of the day — is it about earnings season? A Fed meeting? Oil prices? A big tech launch? Write it like you're catching up a friend who missed the news. Keep it high-level, no specific stock names here — save those for the stories. Example tone: 'So here's the deal — everyone on Wall Street is watching two things right now: whether the Fed is going to cut interest rates (which would be huge for stocks), and a wave of big tech companies reporting their earnings this week. Oh, and oil prices just had their wildest day in months. Buckle up.'",
   "scoreboard": {
     "sp500": { "price": "formatted price", "change": "+X.XX%", "direction": "up/down", "vibe": "short fun comment" },
     "nasdaq": { "price": "formatted price", "change": "+X.XX%", "direction": "up/down", "vibe": "short fun comment" },
