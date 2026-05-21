@@ -104,7 +104,9 @@ Return ONLY a JSON object with this exact structure (no markdown, no backticks, 
   }
 }
 
-Generate exactly 3 stories (pick the most interesting/relevant from the news), 3 coming-up items, and make the quiz and word of the day educational but fun. Stories should be from the provided news — don't make up stories.`;
+Generate exactly 3 stories (pick the most interesting/relevant from the news), 3 coming-up items, and make the quiz and word of the day educational but fun. Stories should be from the provided news — don't make up stories.
+
+IMPORTANT: Do NOT include any citation tags, <cite> tags, or source references in your output. Write everything in your own words as clean plain text. The output must be valid JSON with no HTML tags inside the string values.`;
 
   const response = await client.messages.create({
     model: 'claude-sonnet-4-20250514',
@@ -143,7 +145,14 @@ Generate exactly 3 stories (pick the most interesting/relevant from the news), 3
 }
 
 function parseDigestJSON(text) {
-  const cleaned = text.replace(/```json\s*/g, '').replace(/```\s*/g, '').trim();
+  let cleaned = text.replace(/```json\s*/g, '').replace(/```\s*/g, '').trim();
+  // Strip citation tags that come from web search. Claude sometimes wraps
+  // referenced phrases in <cite index="...">...</cite> or the namespaced
+  // <cite ...>...</cite> variant — both forms leak into our JSON
+  // string values if not removed, breaking parsing (or, worse, rendering as
+  // literal text in the final HTML).
+  cleaned = cleaned.replace(/<\/?cite[^>]*>/g, '');
+  cleaned = cleaned.replace(/<\/?antml:cite[^>]*>/g, '');
   try {
     return JSON.parse(cleaned);
   } catch {
